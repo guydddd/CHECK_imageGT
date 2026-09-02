@@ -1,117 +1,120 @@
-# data_checker — 医学影像数据集检查工具
+# data_checker — Medical Imaging Dataset Validation Toolkit
 
-做深度学习（尤其医学图像分割）之前，先对数据集做「体检」：检查图像与标签是否**一一对应**、文件是否**完整可读**、**尺寸/间距**是否一致、**方向(orientation)**是否一致。本工具把这几类检查拆成独立的命令行脚本，需要哪项就调哪项。
+Before training a deep learning model (especially for medical image segmentation), run a
+"health check" on your dataset: verify that images and labels **correspond one-to-one**, files
+are **complete and readable**, **sizes/spacings** are consistent, and **orientations** match.
+This toolkit splits these checks into standalone command-line scripts — run whichever one you need.
 
-## 特性
+## Features
 
-- **四个独立脚本**，各查一类问题，可单独调用，也可一键跑全部。
-- **通用读取**：基于 SimpleITK，支持 `.mha` / `.mhd` / `.nii` / `.nii.gz` / `.nrrd` 等，扩展名可配置。
-- **输出双格式**：终端打印摘要，同时保存 `.txt` 与 `.json` 报告，便于留档与 CI。
-- **医学影像专项**：除尺寸外，还检查 `spacing`、方向余弦矩阵(direction)、原点(origin)与解剖学轴代码(RAI/LPS 等)。
+- **Four independent scripts**, each targeting one class of problem; run them individually or all at once.
+- **Universal reading** via SimpleITK: supports `.mha` / `.mhd` / `.nii` / `.nii.gz` / `.nrrd` and more, with configurable extensions.
+- **Dual-format output**: prints a summary to the terminal and saves `.txt` + `.json` reports for archival and CI.
+- **Medical-imaging specifics**: beyond shape, it checks `spacing`, the direction cosine matrix, `origin`, and anatomical axis codes (RAI/LPS, etc.).
 
-## 目录结构
+## Directory layout
 
 ```
 data_checker/
-├── common.py                    # 公共模块（文件发现、读取、报告）
-├── check_correspondence.py      # ① 图像与标签一一对应
-├── check_integrity.py           # ② 完整性 / 可读性
-├── check_size.py                # ③ 尺寸 / 间距一致性
-├── check_orientation.py         # ④ 方向 / 原点一致性
-├── check_all.py                 # 一键运行以上四项
+├── common.py                    # Shared utilities (file discovery, reading, reporting)
+├── check_correspondence.py      # ① image-label one-to-one correspondence
+├── check_integrity.py           # ② completeness / readability
+├── check_size.py                # ③ size / spacing consistency
+├── check_orientation.py         # ④ orientation / origin consistency
+├── check_all.py                 # Run all four in one go
 ├── requirements.txt
 └── README.md
 ```
 
-## 安装
+## Installation
 
 ```bash
 pip install -r requirements.txt
 ```
 
-需要 Python ≥ 3.8。核心依赖：`SimpleITK`、`numpy`。
+Requires Python ≥ 3.8. Core dependencies: `SimpleITK`, `numpy`.
 
-## 数据目录约定
+## Data directory convention
 
-图像与标签分别放在两个目录，**文件名（去扩展名后）一一对应**：
+Images and labels live in two separate directories, with **matching filenames (after stripping the extension)**:
 
 ```
 dataset/
-├── image_T2/            # 图像目录
+├── image_T2/            # image directory
 │   ├── 10000_1000000.mha
 │   └── 10001_1000001.mha
-└── label/               # 标签目录（stem 与图像一致）
+└── label/               # label directory (stems match the images)
     ├── 10000_1000000.nii.gz
     └── 10001_1000001.nii.gz
 ```
 
-`image_T2/10000_1000000.mha` 与 `label/10000_1000000.nii.gz` 视为同一对。
+`image_T2/10000_1000000.mha` and `label/10000_1000000.nii.gz` are treated as one pair.
 
-## 用法
+## Usage
 
-### 通用参数（四个脚本通用）
+### Common arguments (shared by all four scripts)
 
-| 参数 | 说明 | 默认 |
+| Argument | Description | Default |
 |---|---|---|
-| `--image_dir` | 图像目录（必填） | — |
-| `--label_dir` | 标签目录（必填） | — |
-| `--image_ext` | 图像扩展名 | `.mha` |
-| `--label_ext` | 标签扩展名 | `.nii.gz` |
-| `--limit N` | 只检查前 N 对（快速试跑） | 全部 |
-| `--report PREFIX` | 报告文件前缀（不含扩展名） | `reports/<标题>` |
-| `--no_save` | 只打印、不保存报告文件 | 关闭 |
+| `--image_dir` | Image directory (required) | — |
+| `--label_dir` | Label directory (required) | — |
+| `--image_ext` | Image file extension | `.mha` |
+| `--label_ext` | Label file extension | `.nii.gz` |
+| `--limit N` | Check only the first N pairs (quick dry run) | all |
+| `--report PREFIX` | Report file prefix (no extension) | `reports/<title>` |
+| `--no_save` | Print only, do not save report files | off |
 
-### ① 一一对应
+### ① One-to-one correspondence
 
 ```bash
 python check_correspondence.py --image_dir ./image_T2 --label_dir ./label
 ```
 
-### ② 完整性 / 可读性
+### ② Completeness / readability
 
 ```bash
 python check_integrity.py --image_dir ./image_T2 --label_dir ./label
 ```
 
-### ③ 尺寸 / 间距一致性
+### ③ Size / spacing consistency
 
 ```bash
 python check_size.py --image_dir ./image_T2 --label_dir ./label
 ```
 
-### ④ 方向 / 原点一致性
+### ④ Orientation / origin consistency
 
 ```bash
 python check_orientation.py --image_dir ./image_T2 --label_dir ./label
 ```
 
-### 一键运行全部
+### Run everything at once
 
 ```bash
 python check_all.py --image_dir ./image_T2 --label_dir ./label
 ```
 
-快速试跑前 20 对、只看终端不落盘：
+Quick dry run over the first 20 pairs, terminal only, no files written:
 
 ```bash
 python check_all.py --image_dir ./image_T2 --label_dir ./label --limit 20 --no_save
 ```
 
-## 每个脚本检查什么
+## What each script checks
 
-| 脚本 | 检查项 |
+| Script | What it checks |
 |---|---|
-| `check_correspondence.py` | 图像/标签数量、stem 是否完全对齐、孤儿文件（只有图像或只有标签） |
-| `check_integrity.py` | 文件能否读取、空文件(全 0)、图像数值范围与 dtype、标签取值分布、前景占比、非整数标签 |
-| `check_size.py` | 每对尺寸(shape)、间距(spacing)是否一致；全样本尺寸/间距分布 |
-| `check_orientation.py` | 每对方向(direction)、原点(origin)是否一致；全样本解剖学轴代码分布 |
+| `check_correspondence.py` | Image/label counts, whether stems fully align, orphan files (image-only or label-only) |
+| `check_integrity.py` | Whether files can be read, empty (all-zero) files, image value range & dtype, label value distribution, foreground ratio, non-integer labels |
+| `check_size.py` | Per-pair shape and spacing consistency; whole-dataset size/spacing distribution |
+| `check_orientation.py` | Per-pair direction and origin consistency; whole-dataset anatomical axis-code distribution |
 
-## 返回码
+## Exit codes
 
-每个脚本退出码为 `0` 表示该项「通过」，非 `0` 表示存在问题，方便在 CI / 脚本里做 `if` 判断。
+Each script exits with `0` on "pass" and non-zero when problems are found, so you can use `if` in shell scripts or CI.
 
-## 常见问题
+## FAQ
 
-- **报告里的中文乱码？** 终端输出按系统编码，Windows 下若乱码，可在运行前执行 `chcp 65001` 或用支持 UTF-8 的终端；`.txt`/`.json` 报告本身固定以 UTF-8 写入，不受影响。
-- **换数据格式？** 改 `--image_ext` / `--label_ext` 即可，无需改代码。
-- **方向种类多于 1 种？** 医学数据常见不同方向混存，训练前建议统一重定向到同一方向（如 RAI/LPS）。
+- **Garbled Chinese in the terminal?** Terminal output follows the system encoding. The `.txt` / `.json` reports are always written as UTF-8 and are unaffected.
+- **Using a different data format?** Change `--image_ext` / `--label_ext` — no code changes needed.
+- **More than one orientation present?** Mixed orientations are common in medical data. Reorient every volume to a single convention (e.g. RAI or LPS) before training.
